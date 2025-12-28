@@ -31,6 +31,7 @@ using System.Net;
 using System.Windows.Forms;
 using static SAM.Game.InvariantShorthand;
 using APITypes = SAM.API.Types;
+using Microsoft.Win32;
 
 namespace SAM.Game
 {
@@ -47,6 +48,7 @@ namespace SAM.Game
         private readonly List<Stats.AchievementDefinition> _AchievementDefinitions = new();
 
         private readonly BindingList<Stats.StatInfo> _Statistics = new();
+        private readonly System.ComponentModel.BindingList<ScheduledAchievement> _SchedulerList = new();
 
         private readonly API.Callbacks.UserStatsReceived _UserStatsReceivedCallback;
 
@@ -55,6 +57,10 @@ namespace SAM.Game
         public Manager(long gameId, API.Client client)
         {
             this.InitializeComponent();
+            this._ScheduleButton.Click += ScheduleButton_Click;
+            
+            
+            this._AchievementListView.OwnerDraw = false;
 
             this._MainTabControl.SelectedTab = this._AchievementsTabPage;
             //this.statisticsList.Enabled = this.checkBox1.Checked;
@@ -104,6 +110,25 @@ namespace SAM.Game
             //this.UserStatsStoredCallback = new API.Callback(1102, new API.Callback.CallbackFunction(this.OnUserStatsStored));
 
             this.RefreshStats();
+
+            // Scheduler Init
+            this._SchedulerDataGridView.DataSource = this._SchedulerList;
+            this.LoadSchedules();
+            this._SchedulerTimer.Enabled = true;
+
+            // Tray Setup
+            this.Resize += this.OnManagerResize;
+
+            // Check startup status
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false))
+                {
+                    string valueName = $"SAM_Game_{this._GameId}";
+                    this._TrayRunOnStartupMenuItem.Checked = key.GetValue(valueName) != null;
+                }
+            }
+            catch {}
         }
 
         private void AddAchievementIcon(Stats.AchievementInfo info, Image icon)
@@ -500,9 +525,34 @@ namespace SAM.Game
                     item.SubItems.Add(info.Description);
                 }
 
-                item.SubItems.Add(info.UnlockTime.HasValue == true
-                    ? info.UnlockTime.Value.ToString()
-                    : "");
+                // Check if scheduled
+                var scheduled = this._SchedulerList.FirstOrDefault(s => s.AchievementId == def.Id && !s.IsUnlocked);
+                string unlockTimeText = "";
+                string statusText = "";
+
+                if (isAchieved)
+                {
+                    statusText = "Unlocked";
+                    if (unlockTime > 0)
+                    {
+                         unlockTimeText = DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime.ToString();
+                    }
+                }
+                else
+                {
+                    if (scheduled != null)
+                    {
+                        statusText = "Scheduled";
+                        unlockTimeText = scheduled.UnlockTime.ToString();
+                    }
+                    else
+                    {
+                        statusText = "Locked";
+                    }
+                }
+
+                item.SubItems.Add(unlockTimeText); // Unlock Time
+                item.SubItems.Add(statusText);     // Status
 
                 info.ImageIndex = 0;
 
@@ -799,6 +849,146 @@ namespace SAM.Game
             this._StatisticsDataGridView.Columns[1].ReadOnly = this._EnableStatsEditingCheckBox.Checked == false;
         }
 
+        private void LoadSchedules()
+        {
+            var all = SchedulerStorage.Load();
+            this._SchedulerList.Clear();
+            foreach (var s in all.Where(x => x.GameId == this._GameId))
+            {
+                this._SchedulerList.Add(s);
+            }
+        }
+
+        private void SaveSchedules()
+        {
+            var existing = SchedulerStorage.Load().Where(x => x.GameId != this._GameId).ToList();
+            existing.AddRange(this._SchedulerList);
+            SchedulerStorage.Save(existing);
+        }
+
+        private void OnAddSchedule(object sender, EventArgs e)
+        {
+            // Gather available achievements
+            List<Stats.AchievementInfo> available = new List<Stats.AchievementInfo>();
+            foreach (ListViewItem item in this._AchievementListView.Items)
+            {
+               if (item.Tag is Stats.AchievementInfo info)
+               {
+                   available.Add(info);
+               }
+            }
+
+            using (var dlg = new SchedulerAddForm(this.Text, (uint)this._GameId, available))
+            {
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    var result = dlg.Result;
+                    result.GameId = (uint)this._GameId;
+                    this._SchedulerList.Add(result);
+                    this.SaveSchedules();
+                }
+            }
+        }
+
+        private void OnRemoveSchedule(object sender, EventArgs e)
+        {
+            if (this._SchedulerDataGridView.SelectedRows.Count == 0) return;
+            foreach (DataGridViewRow row in this._SchedulerDataGridView.SelectedRows)
+            {
+                if (row.DataBoundItem is ScheduledAchievement item)
+                {
+                    this._SchedulerList.Remove(item);
+                }
+            }
+            this.SaveSchedules();
+        }
+
+        private void OnClearSchedules(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Are you sure you want to clear all schedules for this game?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                this._SchedulerList.Clear();
+                this.SaveSchedules();
+            }
+        }
+
+        private void OnUnlockScheduleNow(object sender, EventArgs e)
+        {
+             if (this._SchedulerDataGridView.SelectedRows.Count == 0) return;
+            foreach (DataGridViewRow row in this._SchedulerDataGridView.SelectedRows)
+            {
+                 if (row.DataBoundItem is ScheduledAchievement item && !item.IsUnlocked)
+                 {
+                     if (this._SteamClient.SteamUserStats.SetAchievement(item.AchievementId, true))
+                     {
+                         item.IsUnlocked = true;
+                         item.UnlockTime = DateTime.Now; // Update timestamp
+                     }
+                 }
+            }
+            this._SteamClient.SteamUserStats.StoreStats();
+            this._SchedulerDataGridView.Refresh();
+            this.SaveSchedules();
+            this.RefreshStats();
+        }
+
+         private void OnSchedulerTimer(object sender, EventArgs e)
+        {
+            bool anyUnlocked = false;
+            var now = DateTime.Now;
+            foreach (var item in this._SchedulerList)
+            {
+                if (!item.IsUnlocked && item.UnlockTime <= now)
+                {
+                     if (this._SteamClient.SteamUserStats.SetAchievement(item.AchievementId, true))
+                     {
+                         item.IsUnlocked = true;
+                         anyUnlocked = true;
+                         
+                         // Notify
+                         this._TrayIcon.Visible = true;
+                         this._TrayIcon.ShowBalloonTip(3000, "Achievement Unlocked", $"{item.AchievementName} unlocked!", ToolTipIcon.Info);
+                     }
+                }
+            }
+
+            if (anyUnlocked)
+            {
+                this._SteamClient.SteamUserStats.StoreStats();
+                this.SaveSchedules();
+                this._SchedulerDataGridView.Refresh();
+                this.RefreshStats();
+            }
+        }
+
+        private void OnManagerResize(object sender, EventArgs e)
+        {
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                this.Hide();
+                this._TrayIcon.Visible = true;
+            }
+        }
+
+        private void OnTrayDoubleClick(object sender, EventArgs e)
+        {
+             this.Show();
+             this.WindowState = FormWindowState.Normal;
+             this._TrayIcon.Visible = false;
+        }
+
+        private void OnTrayOpen(object sender, EventArgs e)
+        {
+             this.Show();
+             this.WindowState = FormWindowState.Normal;
+             this._TrayIcon.Visible = false;
+        }
+
+        private void OnTrayExit(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
         private void OnStatCellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
             var view = (DataGridView)sender;
@@ -892,6 +1082,55 @@ namespace SAM.Game
         private void OnFilterUpdate(object sender, KeyEventArgs e)
         {
             this.GetAchievements();
+        }
+        
+
+
+        private void OnTrayRunOnStartup(object sender, EventArgs e)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true))
+                {
+                    string valueName = $"SAM_Game_{this._GameId}";
+                    if (this._TrayRunOnStartupMenuItem.Checked)
+                    {
+                        string path = Application.ExecutablePath;
+                        string value = $"\"{path}\" {this._GameId}";
+                        key.SetValue(valueName, value);
+                    }
+                    else
+                    {
+                        key.DeleteValue(valueName, false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Failed to update registry: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this._TrayRunOnStartupMenuItem.Checked = !this._TrayRunOnStartupMenuItem.Checked;
+            }
+        }
+        private void ScheduleButton_Click(object sender, EventArgs e) 
+        { 
+            MessageBox.Show("Agendador em desenvolvimento!"); 
+        }
+
+        internal void OnScheduleSelected(object sender, EventArgs e) { }
+        internal void OnCheckAchievement(object sender, System.Windows.Forms.ItemCheckedEventArgs e) { }
+        internal void OnDrawColumnHeader(object sender, System.Windows.Forms.DrawListViewColumnHeaderEventArgs e) 
+        { 
+            e.DrawDefault = true; 
+        }
+
+        internal void OnDrawItem(object sender, System.Windows.Forms.DrawListViewItemEventArgs e) 
+        { 
+            e.DrawDefault = true; 
+        }
+
+        internal void OnDrawSubItem(object sender, System.Windows.Forms.DrawListViewSubItemEventArgs e) 
+        { 
+            e.DrawDefault = true; 
         }
     }
 }

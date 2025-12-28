@@ -30,6 +30,9 @@ namespace SAM.Picker
         [STAThread]
         private static void Main()
         {
+            API.Logger.Wipe();
+            API.Logger.Info("SAM Picker started.");
+
             if (API.Steam.GetInstallPath() == Application.StartupPath)
             {
                 MessageBox.Show(

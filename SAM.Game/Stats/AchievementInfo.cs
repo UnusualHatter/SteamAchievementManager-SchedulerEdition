@@ -37,12 +37,17 @@ namespace SAM.Game.Stats
         public string Description;
         public ListViewItem Item;
 
-        #region public int ImageIndex;
+        public string DisplayName { get { return this.Name; } }
+
         public int ImageIndex
         {
             get => this.Item.ImageIndex;
             set => this.Item.ImageIndex = value;
         }
-        #endregion
+
+        public override string ToString()
+        {
+            return this.Name;
+        }
     }
 }

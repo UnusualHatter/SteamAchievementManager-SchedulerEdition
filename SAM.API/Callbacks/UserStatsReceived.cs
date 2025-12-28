@@ -27,4 +27,6 @@ namespace SAM.API.Callbacks
         public override int Id => 1101;
         public override bool IsServer => false;
     }
+
+
 }

@@ -31,6 +31,7 @@ namespace SAM.Game
         [STAThread]
         public static void Main(string[] args)
         {
+            API.Logger.Info($"SAM.Game start with args: {string.Join(" ", args)}");
             long appId;
 
             if (args.Length == 0)

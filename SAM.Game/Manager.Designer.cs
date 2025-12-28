@@ -40,14 +40,17 @@
             this._MainStatusStrip = new System.Windows.Forms.StatusStrip();
             this._CountryStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this._GameStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            this._GameStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this._DownloadStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this._CallbackTimer = new System.Windows.Forms.Timer(this.components);
+            this._ScheduleButton = new System.Windows.Forms.ToolStripButton();
             this._MainTabControl = new System.Windows.Forms.TabControl();
             this._AchievementsTabPage = new System.Windows.Forms.TabPage();
             this._AchievementListView = new SAM.Game.DoubleBufferedListView();
             this._AchievementNameColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this._AchievementDescriptionColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this._AchievementUnlockTimeColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this._AchievementStatusColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this._AchievementsToolStrip = new System.Windows.Forms.ToolStrip();
             this._LockAllButton = new System.Windows.Forms.ToolStripButton();
             this._InvertAllButton = new System.Windows.Forms.ToolStripButton();
@@ -60,6 +63,19 @@
             this._StatisticsTabPage = new System.Windows.Forms.TabPage();
             this._EnableStatsEditingCheckBox = new System.Windows.Forms.CheckBox();
             this._StatisticsDataGridView = new System.Windows.Forms.DataGridView();
+            this._SchedulerTabPage = new System.Windows.Forms.TabPage();
+            this._SchedulerDataGridView = new System.Windows.Forms.DataGridView();
+            this._SchedulerToolStrip = new System.Windows.Forms.ToolStrip();
+            this._AddScheduleButton = new System.Windows.Forms.ToolStripButton();
+            this._RemoveScheduleButton = new System.Windows.Forms.ToolStripButton();
+            this._UnlockNowButton = new System.Windows.Forms.ToolStripButton();
+            this._ClearScheduleButton = new System.Windows.Forms.ToolStripButton();
+            this._SchedulerTimer = new System.Windows.Forms.Timer(this.components);
+            this._TrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
+            this._TrayContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this._TrayOpenMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this._TrayRunOnStartupMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this._TrayExitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             _ToolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             _ToolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this._MainToolStrip.SuspendLayout();
@@ -69,6 +85,10 @@
             this._AchievementsToolStrip.SuspendLayout();
             this._StatisticsTabPage.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this._StatisticsDataGridView)).BeginInit();
+            this._SchedulerTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this._SchedulerDataGridView)).BeginInit();
+            this._SchedulerToolStrip.SuspendLayout();
+            this._TrayContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
             // _ToolStripSeparator1
@@ -86,7 +106,8 @@
             this._MainToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this._StoreButton,
             this._ReloadButton,
-            this._ResetButton});
+            this._ResetButton,
+            this._ScheduleButton});
             this._MainToolStrip.Location = new System.Drawing.Point(0, 0);
             this._MainToolStrip.Name = "_MainToolStrip";
             this._MainToolStrip.Size = new System.Drawing.Size(712, 25);
@@ -124,6 +145,16 @@
             this._ResetButton.Text = "Reset";
             this._ResetButton.ToolTipText = "Reset achievements and/or statistics for active game.";
             this._ResetButton.Click += new System.EventHandler(this.OnResetAllStats);
+            // 
+            // _ScheduleButton
+            // 
+            this._ScheduleButton.Name = "_ScheduleButton";
+            this._ScheduleButton.Size = new System.Drawing.Size(23, 22);
+            this._ScheduleButton.Name = "_ScheduleButton";
+            this._ScheduleButton.Size = new System.Drawing.Size(60, 22);
+            this._ScheduleButton.Text = "Schedule";
+            this._ScheduleButton.ToolTipText = "Schedule selected achievements.";
+            this._ScheduleButton.Click += new System.EventHandler(this.OnScheduleSelected);
             // 
             // _AchievementImageList
             // 
@@ -174,6 +205,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this._MainTabControl.Controls.Add(this._AchievementsTabPage);
             this._MainTabControl.Controls.Add(this._StatisticsTabPage);
+            this._MainTabControl.Controls.Add(this._SchedulerTabPage);
             this._MainTabControl.Location = new System.Drawing.Point(8, 33);
             this._MainTabControl.Name = "_MainTabControl";
             this._MainTabControl.SelectedIndex = 0;
@@ -201,22 +233,28 @@
             this._AchievementListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this._AchievementNameColumnHeader,
             this._AchievementDescriptionColumnHeader,
-            this._AchievementUnlockTimeColumnHeader});
+            this._AchievementUnlockTimeColumnHeader,
+            this._AchievementStatusColumnHeader});
             this._AchievementListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this._AchievementListView.ForeColor = System.Drawing.Color.White;
             this._AchievementListView.FullRowSelect = true;
             this._AchievementListView.GridLines = true;
             this._AchievementListView.HideSelection = false;
             this._AchievementListView.LargeImageList = this._AchievementImageList;
-            this._AchievementListView.Location = new System.Drawing.Point(3, 28);
+            this._AchievementListView.Location = new System.Drawing.Point(3, 3);
             this._AchievementListView.Name = "_AchievementListView";
-            this._AchievementListView.Size = new System.Drawing.Size(682, 277);
+            this._AchievementListView.OwnerDraw = true;
+            this._AchievementListView.Size = new System.Drawing.Size(638, 362);
             this._AchievementListView.SmallImageList = this._AchievementImageList;
             this._AchievementListView.Sorting = System.Windows.Forms.SortOrder.Ascending;
             this._AchievementListView.TabIndex = 4;
             this._AchievementListView.UseCompatibleStateImageBehavior = false;
             this._AchievementListView.View = System.Windows.Forms.View.Details;
             this._AchievementListView.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.OnCheckAchievement);
+            this._AchievementListView.ItemChecked += new System.Windows.Forms.ItemCheckedEventHandler(this.OnCheckAchievement);
+            this._AchievementListView.DrawColumnHeader += new System.Windows.Forms.DrawListViewColumnHeaderEventHandler(this.OnDrawColumnHeader);
+            this._AchievementListView.DrawItem += new System.Windows.Forms.DrawListViewItemEventHandler(this.OnDrawItem);
+            this._AchievementListView.DrawSubItem += new System.Windows.Forms.DrawListViewSubItemEventHandler(this.OnDrawSubItem);
             // 
             // _AchievementNameColumnHeader
             // 
@@ -226,12 +264,17 @@
             // _AchievementDescriptionColumnHeader
             // 
             this._AchievementDescriptionColumnHeader.Text = "Description";
-            this._AchievementDescriptionColumnHeader.Width = 300;
+            this._AchievementDescriptionColumnHeader.Width = 320;
             // 
             // _AchievementUnlockTimeColumnHeader
             // 
             this._AchievementUnlockTimeColumnHeader.Text = "Unlock Time";
-            this._AchievementUnlockTimeColumnHeader.Width = 160;
+            this._AchievementUnlockTimeColumnHeader.Width = 140;
+            // 
+            // _AchievementStatusColumnHeader
+            // 
+            this._AchievementStatusColumnHeader.Text = "Status";
+            this._AchievementStatusColumnHeader.Width = 100;
             // 
             // _AchievementsToolStrip
             // 
@@ -365,7 +408,128 @@
             this._StatisticsDataGridView.Size = new System.Drawing.Size(596, 273);
             this._StatisticsDataGridView.TabIndex = 0;
             this._StatisticsDataGridView.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnStatCellEndEdit);
+            this._StatisticsDataGridView.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnStatCellEndEdit);
             this._StatisticsDataGridView.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.OnStatDataError);
+            // 
+            // _SchedulerTabPage
+            // 
+            this._SchedulerTabPage.Controls.Add(this._SchedulerDataGridView);
+            this._SchedulerTabPage.Controls.Add(this._SchedulerToolStrip);
+            this._SchedulerTabPage.Location = new System.Drawing.Point(4, 22);
+            this._SchedulerTabPage.Name = "_SchedulerTabPage";
+            this._SchedulerTabPage.Size = new System.Drawing.Size(688, 308);
+            this._SchedulerTabPage.TabIndex = 2;
+            this._SchedulerTabPage.Text = "Scheduler";
+            this._SchedulerTabPage.UseVisualStyleBackColor = true;
+            // 
+            // _SchedulerDataGridView
+            // 
+            this._SchedulerDataGridView.AllowUserToAddRows = false;
+            this._SchedulerDataGridView.AllowUserToDeleteRows = false;
+            this._SchedulerDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this._SchedulerDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this._SchedulerDataGridView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this._SchedulerDataGridView.Location = new System.Drawing.Point(0, 25);
+            this._SchedulerDataGridView.Name = "_SchedulerDataGridView";
+            this._SchedulerDataGridView.ReadOnly = true;
+            this._SchedulerDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this._SchedulerDataGridView.Size = new System.Drawing.Size(688, 283);
+            this._SchedulerDataGridView.TabIndex = 1;
+            // 
+            // _SchedulerToolStrip
+            // 
+            this._SchedulerToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this._AddScheduleButton,
+            this._RemoveScheduleButton,
+            this._UnlockNowButton,
+            this._ClearScheduleButton});
+            this._SchedulerToolStrip.Location = new System.Drawing.Point(0, 0);
+            this._SchedulerToolStrip.Name = "_SchedulerToolStrip";
+            this._SchedulerToolStrip.Size = new System.Drawing.Size(688, 25);
+            this._SchedulerToolStrip.TabIndex = 0;
+            this._SchedulerToolStrip.Text = "toolStrip1";
+            // 
+            // _AddScheduleButton
+            // 
+            this._AddScheduleButton.Image = global::SAM.Game.Resources.Save; 
+            this._AddScheduleButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this._AddScheduleButton.Name = "_AddScheduleButton";
+            this._AddScheduleButton.Size = new System.Drawing.Size(58, 22);
+            this._AddScheduleButton.Text = "Schedule";
+            this._AddScheduleButton.Click += new System.EventHandler(this.OnAddSchedule);
+            // 
+            // _RemoveScheduleButton
+            // 
+            this._RemoveScheduleButton.Image = global::SAM.Game.Resources.Reset;
+            this._RemoveScheduleButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this._RemoveScheduleButton.Name = "_RemoveScheduleButton";
+            this._RemoveScheduleButton.Size = new System.Drawing.Size(70, 22);
+            this._RemoveScheduleButton.Text = "Remove";
+            this._RemoveScheduleButton.Click += new System.EventHandler(this.OnRemoveSchedule);
+            // 
+            // _UnlockNowButton
+            // 
+            this._UnlockNowButton.Image = global::SAM.Game.Resources.Unlock;
+            this._UnlockNowButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this._UnlockNowButton.Name = "_UnlockNowButton";
+            this._UnlockNowButton.Size = new System.Drawing.Size(91, 22);
+            this._UnlockNowButton.Text = "Unlock Now";
+            this._UnlockNowButton.Click += new System.EventHandler(this.OnUnlockScheduleNow);
+            // 
+            // _ClearScheduleButton
+            // 
+            this._ClearScheduleButton.Image = global::SAM.Game.Resources.Reset;
+            this._ClearScheduleButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this._ClearScheduleButton.Name = "_ClearScheduleButton";
+            this._ClearScheduleButton.Size = new System.Drawing.Size(54, 22);
+            this._ClearScheduleButton.Text = "Clear";
+            this._ClearScheduleButton.Click += new System.EventHandler(this.OnClearSchedules);
+            // 
+            // _SchedulerTimer
+            // 
+            this._SchedulerTimer.Enabled = true;
+            this._SchedulerTimer.Interval = 1000;
+            this._SchedulerTimer.Tick += new System.EventHandler(this.OnSchedulerTimer);
+            // 
+            // _TrayIcon
+            // 
+            this._TrayIcon.ContextMenuStrip = this._TrayContextMenu;
+            this._TrayIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this._TrayIcon.Text = "Steam Achievement Manager";
+            this._TrayIcon.Visible = false;
+            this._TrayIcon.DoubleClick += new System.EventHandler(this.OnTrayDoubleClick);
+            // 
+            // _TrayContextMenu
+            // 
+            this._TrayContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this._TrayOpenMenuItem,
+            this._TrayRunOnStartupMenuItem,
+            this._TrayExitMenuItem});
+            this._TrayContextMenu.Name = "_TrayContextMenu";
+            this._TrayContextMenu.Size = new System.Drawing.Size(153, 70);
+            // 
+            // _TrayOpenMenuItem
+            // 
+            this._TrayOpenMenuItem.Name = "_TrayOpenMenuItem";
+            this._TrayOpenMenuItem.Size = new System.Drawing.Size(103, 22);
+            this._TrayOpenMenuItem.Text = "Open";
+            this._TrayOpenMenuItem.Click += new System.EventHandler(this.OnTrayOpen);
+            // 
+            // _TrayRunOnStartupMenuItem
+            // 
+            this._TrayRunOnStartupMenuItem.CheckOnClick = true;
+            this._TrayRunOnStartupMenuItem.Name = "_TrayRunOnStartupMenuItem";
+            this._TrayRunOnStartupMenuItem.Size = new System.Drawing.Size(152, 22);
+            this._TrayRunOnStartupMenuItem.Text = "Run on Startup";
+            this._TrayRunOnStartupMenuItem.Click += new System.EventHandler(this.OnTrayRunOnStartup);
+            // 
+            // _TrayExitMenuItem
+            // 
+            this._TrayExitMenuItem.Name = "_TrayExitMenuItem";
+            this._TrayExitMenuItem.Size = new System.Drawing.Size(103, 22);
+            this._TrayExitMenuItem.Text = "Exit";
+            this._TrayExitMenuItem.Click += new System.EventHandler(this.OnTrayExit);
+            // 
             // 
             // Manager
             // 
@@ -391,6 +555,12 @@
             this._StatisticsTabPage.ResumeLayout(false);
             this._StatisticsTabPage.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this._StatisticsDataGridView)).EndInit();
+            this._SchedulerTabPage.ResumeLayout(false);
+            this._SchedulerTabPage.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this._SchedulerDataGridView)).EndInit();
+            this._SchedulerToolStrip.ResumeLayout(false);
+            this._SchedulerToolStrip.PerformLayout();
+            this._TrayContextMenu.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -412,19 +582,34 @@
         private DoubleBufferedListView _AchievementListView;
         private System.Windows.Forms.ColumnHeader _AchievementNameColumnHeader;
         private System.Windows.Forms.ColumnHeader _AchievementDescriptionColumnHeader;
+        private System.Windows.Forms.ColumnHeader _AchievementUnlockTimeColumnHeader;
+        private System.Windows.Forms.ColumnHeader _AchievementStatusColumnHeader;
         private System.Windows.Forms.ToolStrip _AchievementsToolStrip;
         private System.Windows.Forms.ToolStripButton _LockAllButton;
         private System.Windows.Forms.ToolStripButton _InvertAllButton;
         private System.Windows.Forms.ToolStripButton _UnlockAllButton;
         private System.Windows.Forms.DataGridView _StatisticsDataGridView;
         private System.Windows.Forms.ToolStripButton _ResetButton;
+        private System.Windows.Forms.ToolStripButton _ScheduleButton;
         private System.Windows.Forms.ToolStripStatusLabel _DownloadStatusLabel;
         private System.Windows.Forms.ToolStripLabel _DisplayLabel;
         private System.Windows.Forms.ToolStripButton _DisplayUnlockedOnlyButton;
         private System.Windows.Forms.ToolStripButton _DisplayLockedOnlyButton;
         private System.Windows.Forms.ToolStripLabel _MatchingStringLabel;
         private System.Windows.Forms.ToolStripTextBox _MatchingStringTextBox;
-        private System.Windows.Forms.ColumnHeader _AchievementUnlockTimeColumnHeader;
         private System.Windows.Forms.CheckBox _EnableStatsEditingCheckBox;
+        private System.Windows.Forms.TabPage _SchedulerTabPage;
+        private System.Windows.Forms.DataGridView _SchedulerDataGridView;
+        private System.Windows.Forms.ToolStrip _SchedulerToolStrip;
+        private System.Windows.Forms.ToolStripButton _AddScheduleButton;
+        private System.Windows.Forms.ToolStripButton _RemoveScheduleButton;
+        private System.Windows.Forms.ToolStripButton _UnlockNowButton;
+        private System.Windows.Forms.ToolStripButton _ClearScheduleButton;
+        private System.Windows.Forms.Timer _SchedulerTimer;
+        private System.Windows.Forms.NotifyIcon _TrayIcon;
+        private System.Windows.Forms.ContextMenuStrip _TrayContextMenu;
+        private System.Windows.Forms.ToolStripMenuItem _TrayOpenMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem _TrayExitMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem _TrayRunOnStartupMenuItem;
     }
 }
